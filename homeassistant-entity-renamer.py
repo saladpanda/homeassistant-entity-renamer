@@ -38,6 +38,9 @@ def list_entities(regex=None):
                                     re.search(regex, entity_id)]
             entity_data = filtered_entity_data
 
+        # Sort the entity data by friendly name
+        entity_data = sorted(entity_data, key=lambda x: x[0])
+
         # Output the entity data
         return entity_data
 
