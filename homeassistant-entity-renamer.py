@@ -6,13 +6,11 @@ import requests
 import json
 import websocket
 import config
-from tabulate import tabulate
+import tabulate
+tabulate.PRESERVE_WHITESPACE = True
 
 # Determine the protocol based on TLS configuration
-protocol = 'https' if config.TLS else 'http'
-
-# API endpoint for retrieving all entities
-API_ENDPOINT = f'{protocol}://{config.HOST}/api/states'
+TLS_S = 's' if config.TLS else ''
 
 # Header containing the access token
 headers = {
@@ -20,9 +18,31 @@ headers = {
     'Content-Type': 'application/json'
 }
 
+def align_strings_in_column(table, column, c="."):
+    # Get the column data from the table
+    column_data = [row[column] for row in table]
+
+    # Find the maximum length of the first part of the split strings
+    max_length = max(len(s.split(c)[0]) for s in column_data)
+
+    def align_string(s):
+        s_split = s.split(c)
+        return f"{s_split[0]:>{max_length}}.{s_split[1]}"
+
+    # Create the modified table by replacing the column with aligned strings
+    modified_table = [
+        tuple(align_string(value) if i == column else value for i, value in enumerate(row))
+        for row in table
+    ]
+
+    return modified_table
+
 def list_entities(regex=None):
+    # API endpoint for retrieving all entities
+    api_endpoint = f'http{TLS_S}://{config.HOST}/api/states'
+
     # Send GET request to the API endpoint
-    response = requests.get(API_ENDPOINT, headers=headers)
+    response = requests.get(api_endpoint, headers=headers)
 
     # Check if the request was successful
     if response.status_code == 200:
@@ -56,15 +76,14 @@ def rename_entities(entity_data, search_regex, replace_regex):
         renamed_data.append((friendly_name, entity_id, new_entity_id))
 
     # Print the table with friendly name and entity ID
-    table = [("Friendly Name", "Current Entity ID", "New Entity ID")] + renamed_data
-    print(tabulate(table, headers="firstrow"))
+    table = [("Friendly Name", "Current Entity ID", "New Entity ID")] + align_strings_in_column(align_strings_in_column(renamed_data, 1), 2)
+    print(tabulate.tabulate(table, headers="firstrow", tablefmt="github"))
 
     # Ask user for confirmation if replace_regex is provided
     if replace_regex:
         answer = input("\nDo you want to proceed with renaming the entities? (y/N): ")
         if answer.lower() == "y" or answer.lower() == "yes":
-            websocket_protocol = 'wss' if config.TLS else 'ws'
-            websocket_url = f'{websocket_protocol}://{config.HOST}/api/websocket'
+            websocket_url = f'ws{TLS_S}://{config.HOST}/api/websocket'
             ws = websocket.WebSocket()
             ws.connect(websocket_url)
 
@@ -114,8 +133,8 @@ if __name__ == "__main__":
                 rename_entities(entity_data, args.search_regex, args.replace_regex)
             else:
                 # Print the table with friendly name and entity ID
-                table = [("Friendly Name", "Entity ID")] + entity_data
-                print(tabulate(table, headers="firstrow"))
+                table = [("Friendly Name", "Entity ID")] + align_strings_in_column(entity_data, 1)
+                print(tabulate.tabulate(table, headers="firstrow", tablefmt="github"))
         else:
             print("No entities found matching the search regex.")
     else:
