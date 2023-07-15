@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 
-import sys
 import argparse
 import re
 import requests
 import json
-import sys
 import websocket
 import config
 from tabulate import tabulate
