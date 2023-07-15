@@ -50,11 +50,11 @@ def rename_entities(entity_data, search_regex, replace_regex):
     renamed_data = []
     for entity_id, friendly_name in entity_data:
         new_entity_id = re.sub(search_regex, replace_regex, entity_id)
-        renamed_data.append((entity_id, new_entity_id, friendly_name))
+        renamed_data.append((friendly_name, entity_id, new_entity_id))
 
     # Print the table with original and new entity names
-    print("\nOriginal Entity Names vs New Entity Names:")
-    table = [("Original Entity Name", "New Entity Name", "Friendly Name")] + renamed_data
+    print("\nFriendly Name vs Original Entity Name vs New Entity Name:")
+    table = [("Friendly Name", "Original Entity Name", "New Entity Name")] + renamed_data
     print(tabulate(table, headers="firstrow"))
 
     # Ask user for confirmation
@@ -77,9 +77,9 @@ def rename_entities(entity_data, search_regex, replace_regex):
             return
 
         # Rename the entities
-        for index, (entity_id, new_entity_id, _) in enumerate(renamed_data):
+        for index, (_, entity_id, new_entity_id) in enumerate(renamed_data, start=1):
             entity_registry_update_msg = json.dumps({
-                "id": index+1,
+                "id": index,
                 "type": "config/entity_registry/update",
                 "entity_id": entity_id,
                 "new_entity_id": new_entity_id
