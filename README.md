@@ -35,6 +35,12 @@ Tested on HomeAssistant 2023.7.2.
 
 4. Check the output and confirm the renaming process if desired.
 
+## Usage (with docker)
+
+1. Rename `config.py.example` to `config.py` and modify the configuration variables according to your HomeAssistant setup.
+2. `docker build -t homeassistant-renamer .`
+3. `docker run homeassistant-renamer --search sensor`
+
 ## Examples
 
 ```
