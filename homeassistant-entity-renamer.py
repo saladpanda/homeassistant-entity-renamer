@@ -4,7 +4,6 @@ import argparse
 import re
 import requests
 import json
-import csv
 import sys
 import websocket
 import config
@@ -21,7 +20,7 @@ headers = {
     'Content-Type': 'application/json'
 }
 
-def list_entities(regex=None, csv_output=False):
+def list_entities(regex=None):
     # Send GET request to the API endpoint
     response = requests.get(API_ENDPOINT, headers=headers)
 
@@ -39,15 +38,9 @@ def list_entities(regex=None, csv_output=False):
                                     re.search(regex, entity_id)]
             entity_data = filtered_entity_data
 
-        # Output the entity IDs as a list if csv_output is False
-        if not csv_output:
-            for entity_id, _ in entity_data:
-                print(entity_id)
-        else:
-            # Output the entity data in CSV format to stdout with swapped columns
-            writer = csv.writer(sys.stdout)
-            writer.writerow(['Entity ID', 'Friendly Name'])
-            writer.writerows(entity_data)
+        # Output the entity IDs
+        for entity_id, _ in entity_data:
+            print(entity_id)
 
     else:
         print(f'Error: {response.status_code} - {response.text}')
@@ -90,7 +83,6 @@ def rename_entity(old_entity_id, new_entity_id):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="HomeAssistant Entity Renamer")
-    parser.add_argument('--csv', action='store_true', help='Output the data in CSV format')
     parser.add_argument('regex', nargs='?', help='Filter the output using a regular expression')
     parser.add_argument('--old', help='Old entity ID')
     parser.add_argument('--new', help='New entity ID')
@@ -99,4 +91,4 @@ if __name__ == "__main__":
     if args.old and args.new:
         rename_entity(args.old, args.new)
     else:
-        list_entities(args.regex, args.csv)
+        list_entities(args.regex)
