@@ -30,11 +30,11 @@ def list_entities(regex=None):
         data = json.loads(response.text)
 
         # Extract entity IDs and friendly names
-        entity_data = [(entity['entity_id'], entity['attributes'].get('friendly_name', '')) for entity in data]
+        entity_data = [(entity['attributes'].get('friendly_name', ''), entity['entity_id']) for entity in data]
 
         # Filter the entity data if regex argument is provided
         if regex:
-            filtered_entity_data = [(entity_id, friendly_name) for entity_id, friendly_name in entity_data if
+            filtered_entity_data = [(friendly_name, entity_id) for friendly_name, entity_id in entity_data if
                                     re.search(regex, entity_id)]
             entity_data = filtered_entity_data
 
@@ -48,12 +48,12 @@ def list_entities(regex=None):
 
 def rename_entities(entity_data, search_regex, replace_regex):
     renamed_data = []
-    for entity_id, friendly_name in entity_data:
+    for friendly_name, entity_id in entity_data:
         new_entity_id = re.sub(search_regex, replace_regex, entity_id)
         renamed_data.append((friendly_name, entity_id, new_entity_id))
 
     # Print the table with friendly name and entity ID
-    table = [("Friendly Name", "Entity ID")] + renamed_data
+    table = [("Friendly Name", "Current Entity ID", "New Entity ID")] + renamed_data
     print(tabulate(table, headers="firstrow"))
 
     # Ask user for confirmation if replace_regex is provided
