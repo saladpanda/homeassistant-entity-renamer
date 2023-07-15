@@ -1,2 +1,3 @@
-BASE_URL = "http://homeassistant.local:8123"
+HOST = "homeassistant.local:8123"
+TLS = False
 ACCESS_TOKEN = "YOUR_ACCESS_TOKEN"
