@@ -46,7 +46,8 @@ $ ./homeassistant-entity-renamer.py --search "interesting"
 | Interesting Testentity 1   | input_button.interesting_testentity_1   |
 | Interesting testnumber 1   | input_number.interesting_testnumber_1   |
 | interesting testtext 1     |   input_text.interesting_testtext_1     |
-
+```
+```
 $ ./homeassistant-entity-renamer.py --search "interesting_test(.*)_1" --replace "just_another_\1"
 | Friendly Name              | Current Entity ID                       | New Entity ID                      |
 |----------------------------|-----------------------------------------|------------------------------------|
@@ -58,7 +59,8 @@ $ ./homeassistant-entity-renamer.py --search "interesting_test(.*)_1" --replace 
 
 Do you want to proceed with renaming the entities? (y/N): 
 Renaming process aborted.
-
+```
+```
 $ ./homeassistant-entity-renamer.py --search "interesting_test(.*)_1" --replace "just_another_\1"
 | Friendly Name              | Current Entity ID                       | New Entity ID                      |
 |----------------------------|-----------------------------------------|------------------------------------|
