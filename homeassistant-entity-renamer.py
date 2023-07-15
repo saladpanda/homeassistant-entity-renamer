@@ -121,7 +121,7 @@ def rename_entities(entity_data, search_regex, replace_regex):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="HomeAssistant Entity Renamer")
-    parser.add_argument('--search', dest='search_regex', help='Regular expression for search')
+    parser.add_argument('--search', dest='search_regex', help='Regular expression for search. Note: Only searches entity IDs.')
     parser.add_argument('--replace', dest='replace_regex', help='Regular expression for replace')
     args = parser.parse_args()
 
