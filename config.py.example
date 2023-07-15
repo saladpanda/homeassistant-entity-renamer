@@ -1,0 +1,2 @@
+BASE_URL = "http://homeassistant.local:8123"
+ACCESS_TOKEN = "YOUR_ACCESS_TOKEN"
