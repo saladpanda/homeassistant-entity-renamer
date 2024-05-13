@@ -39,7 +39,7 @@ Tested on HomeAssistant 2023.7.2.
 
 1. Rename `config.py.example` to `config.py` and modify the configuration variables according to your HomeAssistant setup.
 2. `docker build -t homeassistant-renamer .`
-3. `docker run homeassistant-renamer --search sensor`
+3. `docker run --rm -i homeassistant-renamer --search sensor`
 
 ## Examples
 
