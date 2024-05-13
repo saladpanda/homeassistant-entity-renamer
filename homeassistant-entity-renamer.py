@@ -7,6 +7,7 @@ import json
 import websocket
 import config
 import tabulate
+import csv
 tabulate.PRESERVE_WHITESPACE = True
 
 # Determine the protocol based on TLS configuration
@@ -26,8 +27,11 @@ def align_strings_in_column(table, column, c="."):
     max_length = max(len(s.split(c)[0]) for s in column_data)
 
     def align_string(s):
-        s_split = s.split(c)
-        return f"{s_split[0]:>{max_length}}.{s_split[1]}"
+        s_split = s.split(c, maxsplit=1)
+        if len(s_split) == 1:
+            return s
+        else:
+            return f"{s_split[0]:>{max_length}}.{s_split[1]}"
 
     # Create the modified table by replacing the column with aligned strings
     modified_table = [
@@ -69,15 +73,26 @@ def list_entities(regex=None):
         return []
 
 
-def rename_entities(entity_data, search_regex, replace_regex):
+def rename_entities(entity_data, search_regex, replace_regex=None, output_csv=None):
     renamed_data = []
-    for friendly_name, entity_id in entity_data:
-        new_entity_id = re.sub(search_regex, replace_regex, entity_id)
-        renamed_data.append((friendly_name, entity_id, new_entity_id))
+    if replace_regex:
+        for friendly_name, entity_id in entity_data:
+            new_entity_id = re.sub(search_regex, replace_regex, entity_id)
+            renamed_data.append((friendly_name, entity_id, new_entity_id))
+    else:
+        renamed_data = [(friendly_name, entity_id, "") for friendly_name, entity_id in entity_data]
 
     # Print the table with friendly name and entity ID
     table = [("Friendly Name", "Current Entity ID", "New Entity ID")] + align_strings_in_column(align_strings_in_column(renamed_data, 1), 2)
     print(tabulate.tabulate(table, headers="firstrow", tablefmt="github"))
+
+    # Same table, but without whitespace for alignment
+    table = [("Friendly Name", "Current Entity ID", "New Entity ID")] + renamed_data
+    if output_csv:
+        with open(output_csv, 'w', newline='') as csvfile:
+            csv_writer = csv.writer(csvfile)
+            csv_writer.writerows(table)
+            print(f"(Table written to {output_csv})")
 
     # Ask user for confirmation if replace_regex is provided
     if replace_regex:
@@ -123,18 +138,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="HomeAssistant Entity Renamer")
     parser.add_argument('--search', dest='search_regex', help='Regular expression for search. Note: Only searches entity IDs.')
     parser.add_argument('--replace', dest='replace_regex', help='Regular expression for replace')
+    parser.add_argument('--output-csv', dest='output_csv', help='Output preview table to CSV.')
     args = parser.parse_args()
 
     if args.search_regex:
         entity_data = list_entities(args.search_regex)
 
         if entity_data:
-            if args.replace_regex:
-                rename_entities(entity_data, args.search_regex, args.replace_regex)
-            else:
-                # Print the table with friendly name and entity ID
-                table = [("Friendly Name", "Entity ID")] + align_strings_in_column(entity_data, 1)
-                print(tabulate.tabulate(table, headers="firstrow", tablefmt="github"))
+            rename_entities(entity_data, args.search_regex, args.replace_regex, args.output_csv)
         else:
             print("No entities found matching the search regex.")
     else:

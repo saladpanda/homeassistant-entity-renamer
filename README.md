@@ -44,14 +44,15 @@ Tested on HomeAssistant 2023.7.2.
 ## Examples
 
 ```
-$ ./homeassistant-entity-renamer.py --search "interesting"
-| Friendly Name              | Entity ID                               |
-|----------------------------|-----------------------------------------|
-| Interesting Testbutton 1   | input_button.interesting_testbutton_1   |
-| Interesting Testdropdown 1 | input_select.interesting_testdropdown_1 |
-| Interesting Testentity 1   | input_button.interesting_testentity_1   |
-| Interesting testnumber 1   | input_number.interesting_testnumber_1   |
-| interesting testtext 1     |   input_text.interesting_testtext_1     |
+$ ./homeassistant-entity-renamer.py --search "interesting" --output-csv output.csv
+| Friendly Name              | Current Entity ID                       | New Entity ID   |
+|----------------------------|-----------------------------------------|-----------------|
+| Interesting Testbutton 1   | input_button.interesting_testbutton_1   |                 |
+| Interesting Testdropdown 1 | input_select.interesting_testdropdown_1 |                 |
+| Interesting Testentity 1   | input_button.interesting_testentity_1   |                 |
+| Interesting testnumber 1   | input_number.interesting_testnumber_1   |                 |
+| interesting testtext 1     |   input_text.interesting_testtext_1     |                 |
+(Table written to output.csv)
 ```
 ```
 $ ./homeassistant-entity-renamer.py --search "interesting_test(.*)_1" --replace "just_another_\1"
