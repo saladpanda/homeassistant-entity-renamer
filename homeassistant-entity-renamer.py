@@ -84,21 +84,21 @@ def list_entities(regex=None):
         return []
 
 
-def rename_entities(entity_data, search_regex, replace_regex=None, output_csv=None):
-    renamed_data = []
+def process_entities(entity_data, search_regex, replace_regex=None, output_csv=None):
+    rename_data = []
     if replace_regex:
         for friendly_name, entity_id in entity_data:
             new_entity_id = re.sub(search_regex, replace_regex, entity_id)
-            renamed_data.append((friendly_name, entity_id, new_entity_id))
+            rename_data.append((friendly_name, entity_id, new_entity_id))
     else:
-        renamed_data = [(friendly_name, entity_id, "") for friendly_name, entity_id in entity_data]
+        rename_data = [(friendly_name, entity_id, "") for friendly_name, entity_id in entity_data]
 
     # Print the table with friendly name and entity ID
-    table = [("Friendly Name", "Current Entity ID", "New Entity ID")] + align_strings(renamed_data)
+    table = [("Friendly Name", "Current Entity ID", "New Entity ID")] + align_strings(rename_data)
     print(tabulate.tabulate(table, headers="firstrow", tablefmt="github"))
 
     # Same table, but without whitespace for alignment
-    table = [("Friendly Name", "Current Entity ID", "New Entity ID")] + renamed_data
+    table = [("Friendly Name", "Current Entity ID", "New Entity ID")] + rename_data
     if output_csv:
         with open(output_csv, 'w', newline='') as csvfile:
             csv_writer = csv.writer(csvfile)
@@ -113,7 +113,10 @@ def rename_entities(entity_data, search_regex, replace_regex=None, output_csv=No
     if answer.lower() not in ["y", "yes"]:
         print("Renaming process aborted.")
         return
+
+    rename_entities(rename_data)
     
+def rename_entities(rename_data):
     websocket_url = f'ws{TLS_S}://{config.HOST}/api/websocket'
     ws = websocket.WebSocket()
     ws.connect(websocket_url)
@@ -130,7 +133,7 @@ def rename_entities(entity_data, search_regex, replace_regex=None, output_csv=No
         return
 
     # Rename the entities
-    for index, (_, entity_id, new_entity_id) in enumerate(renamed_data, start=1):
+    for index, (_, entity_id, new_entity_id) in enumerate(rename_data, start=1):
         entity_registry_update_msg = json.dumps({
             "id": index,
             "type": "config/entity_registry/update",
@@ -159,7 +162,7 @@ if __name__ == "__main__":
         entity_data = list_entities(args.search_regex)
 
         if entity_data:
-            rename_entities(entity_data, args.search_regex, args.replace_regex, args.output_csv)
+            process_entities(entity_data, args.search_regex, args.replace_regex, args.output_csv)
         else:
             print("No entities found matching the search regex.")
     else:
