@@ -7,6 +7,7 @@ import json
 import re
 import requests
 import tabulate
+import ssl
 import websocket
 
 tabulate.PRESERVE_WHITESPACE = True
@@ -118,7 +119,8 @@ def process_entities(entity_data, search_regex, replace_regex=None, output_csv=N
     
 def rename_entities(rename_data):
     websocket_url = f'ws{TLS_S}://{config.HOST}/api/websocket'
-    ws = websocket.WebSocket()
+    sslopt = {"cert_reqs": ssl.CERT_NONE} if not config.SSL_VERIFY else {}
+    ws = websocket.WebSocket(sslopt=sslopt)
     ws.connect(websocket_url)
 
     auth_req = ws.recv()
