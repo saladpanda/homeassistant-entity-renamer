@@ -57,7 +57,7 @@ def list_entities(regex=None):
     api_endpoint = f'http{TLS_S}://{config.HOST}/api/states'
 
     # Send GET request to the API endpoint
-    response = requests.get(api_endpoint, headers=headers)
+    response = requests.get(api_endpoint, headers=headers, verify=config.SSL_VERIFY)
 
     # Check if the request was successful
     if response.status_code == 200:
