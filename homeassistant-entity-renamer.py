@@ -87,7 +87,7 @@ def list_entities(regex=None):
 
 def process_entities(entity_data, search_regex, replace_regex=None, output_csv=None):
     rename_data = []
-    if replace_regex:
+    if replace_regex is not None:
         for friendly_name, entity_id in entity_data:
             new_entity_id = re.sub(search_regex, replace_regex, entity_id)
             rename_data.append((friendly_name, entity_id, new_entity_id))
@@ -107,7 +107,7 @@ def process_entities(entity_data, search_regex, replace_regex=None, output_csv=N
             print(f"(Table written to {output_csv})")
 
     # Ask user for confirmation if replace_regex is provided
-    if not replace_regex:
+    if replace_regex is None:
         return
     
     answer = input("\nDo you want to proceed with renaming the entities? (y/N): ")
