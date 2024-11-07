@@ -7,6 +7,7 @@ import json
 import re
 import requests
 import tabulate
+import ssl
 import websocket
 
 tabulate.PRESERVE_WHITESPACE = True
@@ -57,7 +58,7 @@ def list_entities(regex=None):
     api_endpoint = f'http{TLS_S}://{config.HOST}/api/states'
 
     # Send GET request to the API endpoint
-    response = requests.get(api_endpoint, headers=headers)
+    response = requests.get(api_endpoint, headers=headers, verify=config.SSL_VERIFY)
 
     # Check if the request was successful
     if response.status_code == 200:
@@ -118,7 +119,8 @@ def process_entities(entity_data, search_regex, replace_regex=None, output_csv=N
     
 def rename_entities(rename_data):
     websocket_url = f'ws{TLS_S}://{config.HOST}/api/websocket'
-    ws = websocket.WebSocket()
+    sslopt = {"cert_reqs": ssl.CERT_NONE} if not config.SSL_VERIFY else {}
+    ws = websocket.WebSocket(sslopt=sslopt)
     ws.connect(websocket_url)
 
     auth_req = ws.recv()

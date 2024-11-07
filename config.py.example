@@ -1,3 +1,4 @@
 HOST = "homeassistant.local:8123"
 TLS = False
+SSL_VERIFY = False
 ACCESS_TOKEN = "YOUR_ACCESS_TOKEN"
