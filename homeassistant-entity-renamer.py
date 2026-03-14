@@ -47,6 +47,14 @@ def align_strings(table):
     return table
 
 def list_entities(regex=None, ignore_disabled_entities=False):
+    regex_pattern = None
+    if regex:
+        try:
+            regex_pattern = re.compile(regex)
+        except re.error as exc:
+            print(f"Invalid search regex: {exc}")
+            return []
+
     websocket_url = f'ws{TLS_S}://{config.HOST}/api/websocket'
     sslopt = {"cert_reqs": ssl.CERT_NONE} if not config.SSL_VERIFY else {}
     ws = websocket.WebSocket(sslopt=sslopt)
@@ -55,7 +63,10 @@ def list_entities(regex=None, ignore_disabled_entities=False):
 
     try:
         ws.connect(websocket_url)
-        auth_req = ws.recv()  # Expect 'auth_required'
+        auth_req = json.loads(ws.recv())
+        if auth_req.get("type") != "auth_required":
+            print("Unexpected websocket handshake response.")
+            return []
 
         # Authenticate
         auth_msg = json.dumps({"type": "auth", "access_token": config.ACCESS_TOKEN})
@@ -91,8 +102,8 @@ def list_entities(regex=None, ignore_disabled_entities=False):
 
 
             # Filter the entity data if regex argument is provided
-            if regex:
-                filtered_entity_data = [(fn, eid) for fn, eid in entity_data if re.search(regex, eid)]
+            if regex_pattern:
+                filtered_entity_data = [(fn, eid) for fn, eid in entity_data if regex_pattern.search(eid)]
                 entity_data = filtered_entity_data
 
             # Sort the entity data by friendly name
@@ -105,8 +116,11 @@ def list_entities(regex=None, ignore_disabled_entities=False):
             print(error_message)
             return []
 
-    except Exception as e:
-        print(f"An error occurred during WebSocket communication: {e}")
+    except websocket.WebSocketException as exc:
+        print(f"An error occurred during WebSocket communication: {exc}")
+        return []
+    except json.JSONDecodeError as exc:
+        print(f"Received invalid JSON from Home Assistant: {exc}")
         return []
     finally:
         if ws.connected:

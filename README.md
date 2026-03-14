@@ -31,7 +31,9 @@ Tested on HomeAssistant 2023.7.2.
    ./homeassistant-entity-renamer.py --search <search_regex> --replace <replace_regex>
    ```
 
-   Replace `<search_regex>` with the regular expression that matches the entities you want to rename. Replace `<replace_regex>` with the regular expression used to rename the entities. Note that you can use all the regex magic that Python's `re.sub()` function allows.
+    Replace `<search_regex>` with the regular expression that matches the entities you want to rename. Replace `<replace_regex>` with the regular expression used to rename the entities. Note that you can use all the regex magic that Python's `re.sub()` function allows.
+
+    Use `--ignore-disabled-entities` to skip entities that are disabled in the Home Assistant entity registry.
 
 4. Check the output and confirm the renaming process if desired.
 

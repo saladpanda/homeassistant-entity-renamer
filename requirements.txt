@@ -1,3 +1,2 @@
-requests
 websocket-client
 tabulate
