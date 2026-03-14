@@ -85,9 +85,3 @@ Entity 'input_number.interesting_testnumber_1' renamed to 'input_number.just_ano
 Entity 'input_text.interesting_testtext_1' renamed to 'input_text.just_another_text' successfully!
 
 ```
-
-## Acknowledgements
-
-This project was developed in cooperation with ChatGPT, a large language model trained by OpenAI, based on the GPT-3.5 architecture.
-
-Feel free to explore and modify the script to suit your specific needs. If you encounter any issues or have suggestions for improvements, please submit them to the project's issue tracker.

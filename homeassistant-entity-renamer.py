@@ -5,7 +5,6 @@ import config
 import csv
 import json
 import re
-import requests
 import tabulate
 import ssl
 import websocket
@@ -14,12 +13,6 @@ tabulate.PRESERVE_WHITESPACE = True
 
 # Determine the protocol based on TLS configuration
 TLS_S = 's' if config.TLS else ''
-
-# Header containing the access token
-headers = {
-    'Authorization': f'Bearer {config.ACCESS_TOKEN}',
-    'Content-Type': 'application/json'
-}
 
 def align_strings(table):
     alignment_char = "."
@@ -53,37 +46,71 @@ def align_strings(table):
 
     return table
 
-def list_entities(regex=None):
-    # API endpoint for retrieving all entities
-    api_endpoint = f'http{TLS_S}://{config.HOST}/api/states'
+def list_entities(regex=None, ignore_disabled_entities=False):
+    websocket_url = f'ws{TLS_S}://{config.HOST}/api/websocket'
+    sslopt = {"cert_reqs": ssl.CERT_NONE} if not config.SSL_VERIFY else {}
+    ws = websocket.WebSocket(sslopt=sslopt)
+    
+    msg_id_counter = 1 # Initialize a counter for message IDs
 
-    # Send GET request to the API endpoint
-    response = requests.get(api_endpoint, headers=headers, verify=config.SSL_VERIFY)
+    try:
+        ws.connect(websocket_url)
+        auth_req = ws.recv()  # Expect 'auth_required'
 
-    # Check if the request was successful
-    if response.status_code == 200:
-        # Parse the JSON response
-        data = json.loads(response.text)
+        # Authenticate
+        auth_msg = json.dumps({"type": "auth", "access_token": config.ACCESS_TOKEN})
+        ws.send(auth_msg)
+        auth_result = json.loads(ws.recv())
+        if auth_result["type"] != "auth_ok":
+            print("Authentication failed. Check your access token.")
+            return []
 
-        # Extract entity IDs and friendly names
-        entity_data = [(entity['attributes'].get('friendly_name', ''), entity['entity_id']) for entity in data]
+        # Request entity registry list
+        list_req_id = msg_id_counter
+        msg_id_counter += 1
+        list_msg = json.dumps({
+            "id": list_req_id,
+            "type": "config/entity_registry/list"
+        })
+        ws.send(list_msg)
+        list_result = json.loads(ws.recv())
 
-        # Filter the entity data if regex argument is provided
-        if regex:
-            filtered_entity_data = [(friendly_name, entity_id) for friendly_name, entity_id in entity_data if
-                                    re.search(regex, entity_id)]
-            entity_data = filtered_entity_data
+        if list_result.get("id") == list_req_id and list_result.get("success"):
+            all_entities_raw = list_result["result"]
+            entity_data = []
 
-        # Sort the entity data by friendly name
-        entity_data = sorted(entity_data, key=lambda x: x[0])
+            for entity in all_entities_raw:
+                if ignore_disabled_entities and entity.get("disabled_by") is not None:
+                    continue
 
-        # Output the entity data
-        return entity_data
+                entity_id = entity["entity_id"]
+                # Determine friendly name: user-set name > original_name > entity_id
+                friendly_name = entity.get("name") or entity.get("original_name") or entity_id
 
-    else:
-        print(f'Error: {response.status_code} - {response.text}')
+                entity_data.append((str(friendly_name) if friendly_name is not None else entity_id, entity_id))
+
+
+            # Filter the entity data if regex argument is provided
+            if regex:
+                filtered_entity_data = [(fn, eid) for fn, eid in entity_data if re.search(regex, eid)]
+                entity_data = filtered_entity_data
+
+            # Sort the entity data by friendly name
+            entity_data = sorted(entity_data, key=lambda x: x[0])
+            return entity_data
+        else:
+            error_message = "Failed to retrieve entity list."
+            if list_result.get("error"):
+                error_message += f" Error: {list_result['error']['message']}"
+            print(error_message)
+            return []
+
+    except Exception as e:
+        print(f"An error occurred during WebSocket communication: {e}")
         return []
-
+    finally:
+        if ws.connected:
+            ws.close()
 
 def process_entities(entity_data, search_regex, replace_regex=None, output_csv=None):
     rename_data = []
@@ -158,10 +185,11 @@ if __name__ == "__main__":
     parser.add_argument('--search', dest='search_regex', help='Regular expression for search. Note: Only searches entity IDs.')
     parser.add_argument('--replace', dest='replace_regex', help='Regular expression for replace')
     parser.add_argument('--output-csv', dest='output_csv', help='Output preview table to CSV.')
+    parser.add_argument('--ignore-disabled-entities', action='store_true', help='Ignore disabled entities and only process enabled ones.')
     args = parser.parse_args()
 
     if args.search_regex:
-        entity_data = list_entities(args.search_regex)
+        entity_data = list_entities(args.search_regex, args.ignore_disabled_entities)
 
         if entity_data:
             process_entities(entity_data, args.search_regex, args.replace_regex, args.output_csv)
