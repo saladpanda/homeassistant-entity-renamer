@@ -204,11 +204,16 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.search_regex:
-        entity_data = list_entities(args.search_regex, args.ignore_disabled_entities)
-
-        if entity_data:
-            process_entities(entity_data, args.search_regex, args.replace_regex, args.output_csv)
+        try:
+            re.compile(args.search_regex)
+        except re.error as exc:
+            print(f"Invalid search regex: {exc}")
         else:
-            print("No entities found matching the search regex.")
+            entity_data = list_entities(args.search_regex, args.ignore_disabled_entities)
+
+            if entity_data:
+                process_entities(entity_data, args.search_regex, args.replace_regex, args.output_csv)
+            else:
+                print("No entities found matching the search regex.")
     else:
         parser.print_help()
