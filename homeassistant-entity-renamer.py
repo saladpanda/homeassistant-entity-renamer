@@ -98,13 +98,21 @@ def list_entities(regex=None, ignore_disabled_entities=False):
                 entity_id = entity["entity_id"]
                 # Determine friendly name: user-set name > original_name > entity_id
                 friendly_name = entity.get("name") or entity.get("original_name") or entity_id
+                disabled_by = entity.get("disabled_by")
+                disabled_status = "No" if disabled_by is None else f"Yes (by {disabled_by})"
 
-                entity_data.append((str(friendly_name) if friendly_name is not None else entity_id, entity_id))
+                entity_data.append((
+                    str(friendly_name) if friendly_name is not None else entity_id,
+                    disabled_status,
+                    entity_id,
+                ))
 
 
             # Filter the entity data if regex argument is provided
             if regex_pattern:
-                filtered_entity_data = [(fn, eid) for fn, eid in entity_data if regex_pattern.search(eid)]
+                filtered_entity_data = [
+                    (fn, disabled, eid) for fn, disabled, eid in entity_data if regex_pattern.search(eid)
+                ]
                 entity_data = filtered_entity_data
 
             # Sort the entity data by friendly name
@@ -130,18 +138,21 @@ def list_entities(regex=None, ignore_disabled_entities=False):
 def process_entities(entity_data, search_regex, replace_regex=None, output_csv=None):
     rename_data = []
     if replace_regex is not None:
-        for friendly_name, entity_id in entity_data:
+        for friendly_name, disabled_status, entity_id in entity_data:
             new_entity_id = re.sub(search_regex, replace_regex, entity_id)
-            rename_data.append((friendly_name, entity_id, new_entity_id))
+            rename_data.append((friendly_name, disabled_status, entity_id, new_entity_id))
     else:
-        rename_data = [(friendly_name, entity_id, "") for friendly_name, entity_id in entity_data]
+        rename_data = [
+            (friendly_name, disabled_status, entity_id, "")
+            for friendly_name, disabled_status, entity_id in entity_data
+        ]
 
     # Print the table with friendly name and entity ID
-    table = [("Friendly Name", "Current Entity ID", "New Entity ID")] + align_strings(rename_data)
+    table = [("Friendly Name", "Disabled", "Current Entity ID", "New Entity ID")] + align_strings(rename_data)
     print(tabulate.tabulate(table, headers="firstrow", tablefmt="github"))
 
     # Same table, but without whitespace for alignment
-    table = [("Friendly Name", "Current Entity ID", "New Entity ID")] + rename_data
+    table = [("Friendly Name", "Disabled", "Current Entity ID", "New Entity ID")] + rename_data
     if output_csv:
         with open(output_csv, 'w', newline='') as csvfile:
             csv_writer = csv.writer(csvfile)
@@ -177,7 +188,7 @@ def rename_entities(rename_data):
         return
 
     # Rename the entities
-    for index, (_, entity_id, new_entity_id) in enumerate(rename_data, start=1):
+    for index, (_, _, entity_id, new_entity_id) in enumerate(rename_data, start=1):
         entity_registry_update_msg = json.dumps({
             "id": index,
             "type": "config/entity_registry/update",
