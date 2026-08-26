@@ -64,7 +64,7 @@ def list_entities(regex=None, ignore_disabled_entities=False):
     try:
         ws.connect(websocket_url)
         auth_req = json.loads(ws.recv())
-        if auth_req.get("type") != "auth_required":
+        if not isinstance(auth_req, dict) or auth_req.get("type") != "auth_required":
             print("Unexpected websocket handshake response.")
             return []
 
@@ -72,7 +72,7 @@ def list_entities(regex=None, ignore_disabled_entities=False):
         auth_msg = json.dumps({"type": "auth", "access_token": config.ACCESS_TOKEN})
         ws.send(auth_msg)
         auth_result = json.loads(ws.recv())
-        if auth_result["type"] != "auth_ok":
+        if not isinstance(auth_result, dict) or auth_result.get("type") != "auth_ok":
             print("Authentication failed. Check your access token.")
             return []
 
@@ -86,7 +86,8 @@ def list_entities(regex=None, ignore_disabled_entities=False):
         ws.send(list_msg)
         list_result = json.loads(ws.recv())
 
-        if list_result.get("id") == list_req_id and list_result.get("success"):
+        if (isinstance(list_result, dict) and list_result.get("id") == list_req_id
+                and list_result.get("success") and isinstance(list_result.get("result"), list)):
             all_entities_raw = list_result["result"]
             entity_data = []
 
@@ -111,8 +112,8 @@ def list_entities(regex=None, ignore_disabled_entities=False):
             return entity_data
         else:
             error_message = "Failed to retrieve entity list."
-            if list_result.get("error"):
-                error_message += f" Error: {list_result['error']['message']}"
+            if isinstance(list_result, dict) and isinstance(list_result.get("error"), dict):
+                error_message += f" Error: {list_result['error'].get('message', 'Unknown error')}"
             print(error_message)
             return []
 
