@@ -46,7 +46,7 @@ def align_strings(table):
 
     return table
 
-def list_entities(regex=None, ignore_disabled_entities=False):
+def list_entities(regex=None, ignore_disabled_entities=False, work_on_friendly_names=False):
     regex_pattern = None
     if regex:
         try:
@@ -115,7 +115,7 @@ def list_entities(regex=None, ignore_disabled_entities=False):
                 filtered_entity_data = [
                     (fn, disabled, platform, eid)
                     for fn, disabled, platform, eid in entity_data
-                    if regex_pattern.search(eid)
+                    if regex_pattern.search(fn if work_on_friendly_names else eid)
                 ]
                 entity_data = filtered_entity_data
 
@@ -139,24 +139,36 @@ def list_entities(regex=None, ignore_disabled_entities=False):
         if ws.connected:
             ws.close()
 
-def process_entities(entity_data, search_regex, replace_regex=None, output_csv=None):
+def process_entities(entity_data, search_regex, replace_regex=None, output_csv=None,
+                     work_on_friendly_names=False):
     rename_data = []
     if replace_regex is not None:
         for friendly_name, disabled_status, platform, entity_id in entity_data:
-            new_entity_id = re.sub(search_regex, replace_regex, entity_id)
-            rename_data.append((friendly_name, disabled_status, platform, entity_id, new_entity_id))
+            current_value = friendly_name if work_on_friendly_names else entity_id
+            new_value = re.sub(search_regex, replace_regex, current_value)
+            rename_data.append((friendly_name, disabled_status, platform, entity_id, new_value))
     else:
         rename_data = [
             (friendly_name, disabled_status, platform, entity_id, "")
             for friendly_name, disabled_status, platform, entity_id in entity_data
         ]
 
+    if work_on_friendly_names:
+        table_data = [
+            (friendly_name, new_value, disabled_status, platform, entity_id)
+            for friendly_name, disabled_status, platform, entity_id, new_value in rename_data
+        ]
+        headers = ("Current Friendly Name", "New Friendly Name", "Disabled", "Integration", "Entity ID")
+    else:
+        headers = ("Friendly Name", "Disabled", "Integration", "Current Entity ID", "New Entity ID")
+        table_data = rename_data
+
     # Print the table with friendly name and entity ID
-    table = [("Friendly Name", "Disabled", "Integration", "Current Entity ID", "New Entity ID")] + align_strings(rename_data)
+    table = [headers] + align_strings(table_data)
     print(tabulate.tabulate(table, headers="firstrow", tablefmt="github"))
 
     # Same table, but without whitespace for alignment
-    table = [("Friendly Name", "Disabled", "Integration", "Current Entity ID", "New Entity ID")] + rename_data
+    table = [headers] + table_data
     if output_csv:
         with open(output_csv, 'w', newline='') as csvfile:
             csv_writer = csv.writer(csvfile)
@@ -172,9 +184,9 @@ def process_entities(entity_data, search_regex, replace_regex=None, output_csv=N
         print("Renaming process aborted.")
         return
 
-    rename_entities(rename_data)
+    rename_entities(rename_data, work_on_friendly_names)
     
-def rename_entities(rename_data):
+def rename_entities(rename_data, work_on_friendly_names=False):
     websocket_url = f'ws{TLS_S}://{config.HOST}/api/websocket'
     sslopt = {"cert_reqs": ssl.CERT_NONE} if not config.SSL_VERIFY else {}
     ws = websocket.WebSocket(sslopt=sslopt)
@@ -192,18 +204,24 @@ def rename_entities(rename_data):
         return
 
     # Rename the entities
-    for index, (_, _, _, entity_id, new_entity_id) in enumerate(rename_data, start=1):
-        entity_registry_update_msg = json.dumps({
+    for index, (friendly_name, _, _, entity_id, new_value) in enumerate(rename_data, start=1):
+        entity_registry_update_msg = {
             "id": index,
             "type": "config/entity_registry/update",
             "entity_id": entity_id,
-            "new_entity_id": new_entity_id
-        })
-        ws.send(entity_registry_update_msg)
+        }
+        if work_on_friendly_names:
+            entity_registry_update_msg["name"] = new_value
+        else:
+            entity_registry_update_msg["new_entity_id"] = new_value
+        ws.send(json.dumps(entity_registry_update_msg))
         update_result = ws.recv()
         update_result = json.loads(update_result)
         if update_result["success"]:
-            print(f"Entity '{entity_id}' renamed to '{new_entity_id}' successfully!")
+            if work_on_friendly_names:
+                print(f"Friendly name for entity '{entity_id}' changed from '{friendly_name}' to '{new_value}' successfully!")
+            else:
+                print(f"Entity '{entity_id}' renamed to '{new_value}' successfully!")
         else:
             print(f"Failed to rename entity '{entity_id}': {update_result['error']['message']}")
 
@@ -212,10 +230,11 @@ def rename_entities(rename_data):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="HomeAssistant Entity Renamer")
-    parser.add_argument('--search', dest='search_regex', help='Regular expression for search. Note: Only searches entity IDs.')
+    parser.add_argument('--search', dest='search_regex', help='Regular expression for search.')
     parser.add_argument('--replace', dest='replace_regex', help='Regular expression for replace')
     parser.add_argument('--output-csv', dest='output_csv', help='Output preview table to CSV.')
     parser.add_argument('--ignore-disabled-entities', action='store_true', help='Ignore disabled entities and only process enabled ones.')
+    parser.add_argument('--friendly-names', action='store_true', help='Search and rename friendly names instead of entity IDs. Prefix --search with (?i) to ignore case.')
     args = parser.parse_args()
 
     if args.search_regex:
@@ -224,10 +243,16 @@ if __name__ == "__main__":
         except re.error as exc:
             print(f"Invalid search regex: {exc}")
         else:
-            entity_data = list_entities(args.search_regex, args.ignore_disabled_entities)
+            entity_data = list_entities(args.search_regex, args.ignore_disabled_entities, args.friendly_names)
 
             if entity_data:
-                process_entities(entity_data, args.search_regex, args.replace_regex, args.output_csv)
+                process_entities(
+                    entity_data,
+                    args.search_regex,
+                    args.replace_regex,
+                    args.output_csv,
+                    args.friendly_names,
+                )
             else:
                 print("No entities found matching the search regex.")
     else:
